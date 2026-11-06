@@ -185,7 +185,7 @@ def get_user_borrowings(user_id: str):
     TODO: Implement user borrowing retrieval.
 
     Should return current borrowings for a user.
-    Look at test_library_service_user_borrowings() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -195,7 +195,7 @@ def suspend_user(user_id: str, reason: str):
     TODO: Implement user suspension with event emission.
 
     Should suspend user and emit UserSuspended event.
-    Look at test_library_service_suspend_user() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -228,7 +228,7 @@ def handle_book_returned(payload: Dict[Any, Any]):
     TODO: Implement return notification handler.
 
     Should send return confirmation and late fee notifications if applicable.
-    Look at test_notification_service_book_returned() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -238,7 +238,7 @@ def send_notification(user_id: str, message: str, notification_type: str):
     TODO: Implement notification sending.
 
     Should store notification and emit NotificationSent event.
-    Look at test_notification_service_send() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -248,7 +248,7 @@ def get_user_notifications(user_id: str):
     TODO: Implement user notification retrieval.
 
     Should return all notifications for a user.
-    Look at test_notification_service_get_notifications() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -258,7 +258,7 @@ def set_notification_preferences(user_id: str, preferences: Dict[str, bool]):
     TODO: Implement notification preferences.
 
     Should store user notification preferences.
-    Look at test_notification_service_preferences() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -281,7 +281,7 @@ def handle_book_returned_analytics(payload: Dict[Any, Any]):
     TODO: Implement return analytics handler.
 
     Should track return patterns and calculate duration metrics.
-    Look at test_analytics_service_book_returned() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -291,7 +291,7 @@ def handle_user_registered_analytics(payload: Dict[Any, Any]):
     TODO: Implement user registration analytics handler.
 
     Should track user growth and demographics.
-    Look at test_analytics_service_user_registered() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -311,7 +311,7 @@ def get_book_popularity_metrics():
     TODO: Implement book popularity metrics.
 
     Should return book borrowing frequency and trends.
-    Look at test_analytics_service_popularity_metrics() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -321,7 +321,7 @@ def track_system_performance(event_type: str, processing_time: float):
     TODO: Implement system performance tracking.
 
     Should track event processing performance metrics.
-    Look at test_analytics_service_performance_tracking() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -335,6 +335,11 @@ def handle_any_event_for_audit(event_type: str, payload: Dict[Any, Any], metadat
 
     Should log all events for compliance and audit purposes.
     Look at test_audit_service_event_logging() for requirements.
+
+    Note: the broker calls every handler as handler(payload). This handler
+    needs three arguments, so register a small wrapper per event type, e.g.
+        register_event_handler(et, lambda p, et=et: handle_any_event_for_audit(et, p, {}), "AuditService")
+    (pass richer metadata if your broker exposes it).
     """
     pass
 
@@ -344,7 +349,7 @@ def create_system_snapshot():
     TODO: Implement system state snapshot creation.
 
     Should capture current state of all services for backup/recovery.
-    Look at test_audit_service_snapshot_creation() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -354,7 +359,7 @@ def reconstruct_state_from_events(target_date: str):
     TODO: Implement state reconstruction from events.
 
     Should rebuild system state by replaying events up to target date.
-    Look at test_audit_service_state_reconstruction() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -374,7 +379,7 @@ def detect_anomalies():
     TODO: Implement anomaly detection.
 
     Should analyze event patterns and detect suspicious activities.
-    Look at test_audit_service_anomaly_detection() for requirements.
+    There is no dedicated test for this function.
     """
     pass
 
@@ -386,6 +391,10 @@ def initialize_event_driven_system():
 
     Should register all event handlers for all services.
     Look at test_system_initialization() for requirements.
+
+    Caution: never subscribe a service to an event it emits itself
+    (e.g. Analytics to AnalyticsUpdated). process_events() would then
+    never terminate. The audit service only consumes events.
     """
     pass
 
