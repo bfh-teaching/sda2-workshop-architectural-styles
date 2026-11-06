@@ -47,6 +47,15 @@ This exercise teaches layered architecture through hands-on implementation:
 3. **Presentation Layer Tests**: Formatting and input handling
 4. **Architecture Tests**: Verify proper layer separation
 
+## ▶️ Running the Tests
+
+```bash
+cd 02-layered
+python3 library_management.py        # on Windows: python library_management.py
+```
+
+Expected messages (e.g. "not available", "not borrowed", "successfully") are defined in the test assertions: read them before implementing the business layer.
+
 ## 🚀 Implementation Strategy
 
 ### Phase 1: Data Access Layer (Bottom-Up)
@@ -143,9 +152,9 @@ def test_presentation_layer_formatting(self):
 **✅ ALLOWED:**
 ```python
 # Presentation calls Business
-def display_user_books(user_id):
+def display_user_borrowed_books(user_id):
     books = get_user_borrowed_books_with_details(user_id)  # ✅ OK
-    return format_books(books)
+    return format_book_display(books)
 
 # Business calls Data  
 def borrow_book_workflow(user_id, book_id):
@@ -157,7 +166,7 @@ def borrow_book_workflow(user_id, book_id):
 **❌ FORBIDDEN:**
 ```python
 # Presentation calling Data directly
-def display_user_books(user_id):
+def display_user_borrowed_books(user_id):
     books = get_all_books()  # ❌ WRONG - skips business layer
     
 # Business accessing global data
@@ -201,8 +210,10 @@ def test_save_book():
 ### Data Layer Pattern: Simple CRUD
 ```python
 def get_book_by_id(book_id):
-    """Pure data access - no business logic"""
-    return books_db.get(book_id, None)
+    """Pure data access - no business logic.
+    Returns a copy, so callers cannot change storage without save_book()."""
+    book = books_db.get(book_id)
+    return dict(book) if book is not None else None
 
 def save_book(book_id, book_data):
     """Pure data storage - no validation"""
