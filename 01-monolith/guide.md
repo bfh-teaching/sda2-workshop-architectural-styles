@@ -231,8 +231,8 @@ You've successfully completed the exercise when:
 
 After completing this exercise:
 
-1. **Compare with solution** - See if your implementation differs
-2. **Run the interactive demo** - See your code in action
+1. **Compare with another group** - See if your implementation differs
+2. **Record your result on the Miro board** - Test output and answers
 3. **Reflect on the architecture** - What are the pros and cons?
 4. **Prepare for layered architecture** - How might this be different?
 
