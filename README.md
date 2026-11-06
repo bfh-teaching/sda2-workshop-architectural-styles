@@ -96,6 +96,10 @@ Compare the three implementations and relate them to your Assignment 1 case.
 
 You may use AI assistants. Make sure you can explain every line of your solution in the group discussion.
 
+## License
+
+MIT License, see [LICENSE](LICENSE).
+
 ## Questions
 
 Ask during the workshop or in the SDA2 Moodle forum.
