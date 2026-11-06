@@ -49,11 +49,20 @@ This is the most advanced exercise, teaching sophisticated distributed system co
 
 | Service | Primary Responsibility | Data Managed | Events Emitted | Events Consumed |
 |---------|----------------------|---------------|----------------|-----------------|
-| **Library** | Core domain logic | Books, Users, Borrowings | BookAdded, BookBorrowed, BookReturned, UserRegistered | None (domain root) |
+| **Library** | Core domain logic | Books, Users, Borrowings | BookAdded, BookBorrowed, BookReturned, UserRegistered, UserSuspended | None (domain root) |
 | **Notification** | User communications | User preferences, Messages | NotificationSent | UserRegistered, BookBorrowed, BookReturned |
-| **Analytics** | Usage tracking | Metrics, Reports, Performance | AnalyticsUpdated | All events (for tracking) |
-| **Audit** | Event sourcing | Event logs, Snapshots | AuditLogged | All events (for compliance) |
+| **Analytics** | Usage tracking | Metrics, Reports, Performance | AnalyticsUpdated (optional) | All domain events (not its own) |
+| **Audit** | Event sourcing | Event logs, Snapshots | None | All domain events (for compliance) |
 | **Message Broker** | Event delivery | Event queue, Handlers | None | All events (for routing) |
+
+## ▶️ Running the Tests
+
+```bash
+cd 03-event-driven
+python3 library_notification.py        # on Windows: python library_notification.py
+```
+
+Start with the message broker (about 5 tests), then the library service. The audit handler takes three arguments while the broker passes only the payload: register a small wrapper (see the docstring of `handle_any_event_for_audit`).
 
 ## 🚀 Implementation Strategy
 
@@ -121,7 +130,7 @@ def borrow_book(user_id, book_id):
 def handle_book_borrowed(payload):
     user_id = payload["user_id"]
     book_title = payload["book_title"]
-    send_notification(user_id, f"You borrowed '{book_title}'", "confirmation")
+    send_notification(user_id, f"You borrowed '{book_title}'", "borrow_confirmation")
 ```
 
 **❌ WRONG Direct Coupling:**
@@ -169,7 +178,7 @@ def borrow_book(user_id, book_id):
 def handle_book_borrowed(payload):
     # Doesn't know/care who borrowed or why
     # Just sends appropriate notification
-    send_notification(payload["user_id"], message)
+    send_notification(payload["user_id"], message, "borrow_confirmation")
 ```
 
 **Benefits:**
@@ -293,20 +302,28 @@ There are significant security and GDPR/Swiss Data Protection Law (and other reg
 def process_events():
     while event_queue:
         event = event_queue.pop(0)
-        
-        for handler in get_handlers(event["type"]):
+
+        for handler in event_handlers.get(event["type"], []):
             try:
-                handler(event["payload"])
+                handler["handler"](event["payload"])   # adapt to your handler structure
             except Exception as e:
-                # Log failure
-                log_failed_event(event, handler, e)
-                
-                # Retry logic
-                if event["retry_count"] < MAX_RETRIES:
-                    event["retry_count"] += 1
-                    event_queue.append(event)  # Retry later
-                else:
-                    move_to_dead_letter_queue(event)
+                # Record the failure once, keep processing the other handlers
+                failed_events.append({
+                    "original_event": event,
+                    "service": handler["service"],
+                    "error": str(e),
+                })
+```
+
+In this exercise a failed event is recorded exactly once (see `test_message_broker_failure_handling`). Production brokers add retries with a retry counter and a dead-letter queue for events that keep failing; that is not required here.
+
+```python
+# Production-style extension (not required, not tested):
+# if event.get("retry_count", 0) < MAX_RETRIES:
+#     event["retry_count"] = event.get("retry_count", 0) + 1
+#     event_queue.append(event)
+# else:
+#     dead_letter_queue.append(event)
 ```
 
 ### Correlation IDs for Tracing
@@ -317,10 +334,12 @@ def process_events():
 correlation_id = str(uuid.uuid4())
 emit_event("UserRegistered", payload, correlation_id)
 
-# Related events use same correlation ID
+# Related events use the same correlation ID. Handlers only receive the
+# payload, so the emitting service puts the ID into the payload:
+emit_event("UserRegistered", {"user_id": uid, "correlation_id": correlation_id}, correlation_id)
+
 def handle_user_registered(payload):
-    correlation_id = get_current_correlation_id()
-    emit_event("NotificationSent", {...}, correlation_id)
+    emit_event("NotificationSent", {...}, payload.get("correlation_id"))
 
 # Enables tracing entire workflow
 def trace_user_registration_workflow(correlation_id):
@@ -359,8 +378,12 @@ You've mastered event-driven architecture when:
 **Solution:** Include all necessary context in event payload (but: see tradeoff-discussion above)
 
 ### Pitfall 2: Synchronous Disguised as Async
-**Problem:** Calling `process_events()` immediately after `emit_event()`
-**Solution:** Truly async processing with separate event loop
+**Problem:** In production, calling `process_events()` immediately after `emit_event()` turns the event flow into a hidden synchronous call chain
+**Solution:** A separate consumer loop or broker process (Kafka, RabbitMQ). In this exercise the tests call `process_events()` explicitly so the results are deterministic; that is a simplification, not the target design.
+
+### Pitfall 5: Feedback Loops
+**Problem:** A service subscribes to an event type it emits itself (e.g. Analytics consuming `AnalyticsUpdated`), so `process_events()` never terminates
+**Solution:** Subscribe services only to domain events of other services; the audit service only consumes
 
 ### Pitfall 3: Service Leakage
 **Problem:** Services knowing about other services' internal data structures
